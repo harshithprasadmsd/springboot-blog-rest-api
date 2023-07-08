@@ -3,12 +3,13 @@ package com.springboot.blog.controller;
 import com.springboot.blog.payload.PostDto;
 import com.springboot.blog.payload.PostResponse;
 import com.springboot.blog.service.PostService;
-import com.springboot.blog.utils.AppContants;
-import jakarta.validation.Valid;
+import com.springboot.blog.utils.AppConstants;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -21,33 +22,54 @@ public class PostController {
     public PostController(PostService postService) {
         this.postService = postService;
     }
-//    create blogPost rest api
+
+    // create blog post rest api
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<PostDto> createPost(@Valid @RequestBody PostDto postDto){
-        return  new ResponseEntity<>(postService.createPost(postDto), HttpStatus.CREATED);
+        return new ResponseEntity<>(postService.createPost(postDto), HttpStatus.CREATED);
     }
 
+    // get all posts rest api
     @GetMapping
-    public ResponseEntity<PostResponse> getAllPosts(@RequestParam(value= "pageNo",defaultValue = AppContants.DEFAULT_PAGE_NUMBER,required = false)int pageNo,
-                                                    @RequestParam(value = "pageSize",defaultValue = AppContants.DEFAULT_PAGE_SIZE,required = false)int pageSize,
-                                                    @RequestParam(value = "sortBy", defaultValue = AppContants.DEFAULT_SORT_BY, required = false) String sortBy,
-                                                    @RequestParam(value = "sortDir", defaultValue = AppContants.DEFAULT_SORT_DIRECTION, required = false) String sortDir){
-        return new ResponseEntity<>(postService.getAllPosts(pageNo,pageSize,sortBy,sortDir),HttpStatus.OK);
+    public PostResponse getAllPosts(
+            @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false) String sortDir
+    ){
+        return postService.getAllPosts(pageNo, pageSize, sortBy, sortDir);
     }
 
+    // get post by id
     @GetMapping("/{id}")
-    public ResponseEntity<PostDto> getPostById(@PathVariable(name = "id")long id){
+    public ResponseEntity<PostDto> getPostById(@PathVariable(name = "id") long id){
         return ResponseEntity.ok(postService.getPostById(id));
     }
 
+    // update post by id rest api
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<PostDto> updatePost(@Valid @RequestBody PostDto postDto,@PathVariable(name ="id") long id){
-        return ResponseEntity.ok(postService.updatePost(postDto,id));
+    public ResponseEntity<PostDto> updatePost(@Valid @RequestBody PostDto postDto, @PathVariable(name = "id") long id){
+
+        PostDto postResponse = postService.updatePost(postDto, id);
+
+        return new ResponseEntity<>(postResponse, HttpStatus.OK);
     }
 
+    // delete post rest api
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletePost(@PathVariable(name="id")long id){
+    public ResponseEntity<String> deletePost(@PathVariable(name = "id") long id){
+
         postService.deletePost(id);
-        return new ResponseEntity<>("Post entity deleted successfully ",HttpStatus.OK);
+
+        return new ResponseEntity<>("Post entity deleted successfully.", HttpStatus.OK);
+    }
+//    build get posts by categoryId
+    @GetMapping("/category/{id}")
+    public ResponseEntity<List<PostDto>> getPostByCategory(@PathVariable(name="id") Long categoryId){
+        List<PostDto> postDtos = postService.getPostsByCategory(categoryId);
+        return ResponseEntity.ok(postDtos);
     }
 }
